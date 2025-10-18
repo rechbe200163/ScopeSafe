@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-import { stripe } from '@/lib/stripe';
+import { getActivePriceIdForProduct, stripe } from '@/lib/stripe';
 import type { SubscriptionTier } from '@/lib/subscriptions/plans';
 import {
   getCancelUrl,
@@ -13,46 +13,6 @@ const ACTIVE_SUBSCRIPTION_STATUSES = new Set(['active', 'trialing', 'past_due'])
 const TRIAL_DAYS: Partial<Record<SubscriptionTier, number>> = {
   pro: 3,
 };
-
-async function getPriceIdForProduct(productId: string) {
-  if (!stripe) return null;
-
-  try {
-    const product = await stripe.products.retrieve(productId, {
-      expand: ['default_price'],
-    });
-
-    const defaultPrice = product.default_price;
-
-    if (typeof defaultPrice === 'string') {
-      return defaultPrice;
-    }
-
-    if (
-      defaultPrice &&
-      typeof defaultPrice === 'object' &&
-      'id' in defaultPrice &&
-      typeof defaultPrice.id === 'string'
-    ) {
-      return defaultPrice.id;
-    }
-  } catch (error) {
-    console.error('Stripe product lookup failed:', error);
-  }
-
-  try {
-    const prices = await stripe.prices.list({
-      product: productId,
-      active: true,
-      limit: 1,
-    });
-
-    return prices.data[0]?.id ?? null;
-  } catch (error) {
-    console.error('Stripe price lookup failed:', error);
-    return null;
-  }
-}
 
 function normalizeTier(value: unknown): SubscriptionTier | null {
   if (typeof value !== 'string') return null;
@@ -104,7 +64,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const priceId = await getPriceIdForProduct(productId);
+    const priceId = await getActivePriceIdForProduct(productId);
 
     if (!priceId) {
       return NextResponse.json(

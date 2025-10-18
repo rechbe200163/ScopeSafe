@@ -1,8 +1,23 @@
 import { Button } from '@/components/ui/button';
+import { determineLifetimeTier } from '@/lib/lifetime';
+import { createClient } from '@/lib/supabase/server';
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import { Shield, Zap, FileText, TrendingUp, Check, X } from 'lucide-react';
 
-export default function HomePage() {
+export const dynamic = 'force-dynamic';
+
+export default async function HomePage() {
+  const supabase = await createClient();
+  const { count, error } = await supabase
+    .from('users')
+    .select('id', { count: 'exact', head: true })
+    .not('lifetime_tier', 'is', null);
+
+  if (!error && determineLifetimeTier(count ?? 0) !== 'closed') {
+    redirect('/get-lifetime-access');
+  }
+
   return (
     <div className='flex min-h-screen flex-col'>
       {/* Hero Section */}
