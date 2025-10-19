@@ -1,3 +1,4 @@
+import type { LifetimeTier } from '@/lib/lifetime';
 import { getSubscriptionEntitlements } from '@/lib/subscriptions/permissions';
 import type { SubscriptionTier } from '@/lib/subscriptions/plans';
 import { createClient } from '@/lib/supabase/server';
@@ -15,7 +16,7 @@ export async function GET(
     const { data: changeOrder, error } = await supabase
       .from('change_orders')
       .select(
-        '*, requests(client_message, projects(name, client_name)), users(name, company_name, email, subscription_tier, subscription_status)'
+        '*, requests(client_message, projects(name, client_name)), users(name, company_name, email, subscription_tier, subscription_status, lifetime_tier)'
       )
       .eq('id', id)
       .single();
@@ -32,7 +33,11 @@ export async function GET(
         | SubscriptionTier
         | null
         | undefined,
-      changeOrder.users?.subscription_status as string | null | undefined
+      changeOrder.users?.subscription_status as string | null | undefined,
+      {
+        lifetimeTier: changeOrder.users
+          ?.lifetime_tier as LifetimeTier | null | undefined,
+      }
     );
 
     // Generate HTML for PDF

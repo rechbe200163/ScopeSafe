@@ -13,6 +13,7 @@ import { ArrowLeft, Plus, FileText, DollarSign, Clock } from 'lucide-react';
 import { notFound } from 'next/navigation';
 import { ProjectEditForm } from '@/components/project-edit-form';
 import { ChangeOrdersList } from '@/components/change-orders-list';
+import type { LifetimeTier } from '@/lib/lifetime';
 import { getSubscriptionEntitlements } from '@/lib/subscriptions/permissions';
 import { SubscriptionTier } from '@/lib/subscriptions/plans';
 
@@ -32,13 +33,16 @@ export default async function ProjectDetailPage({
 
   const { data: profile } = await supabase
     .from('users')
-    .select('subscription_tier, subscription_status')
+    .select('subscription_tier, subscription_status, lifetime_tier')
     .eq('id', user?.id)
     .single();
 
   const entitlements = getSubscriptionEntitlements(
     profile?.subscription_tier as SubscriptionTier | null | undefined,
-    profile?.subscription_status as string | null | undefined
+    profile?.subscription_status as string | null | undefined,
+    {
+      lifetimeTier: profile?.lifetime_tier as LifetimeTier | null | undefined,
+    }
   );
 
   // Fetch project details

@@ -38,8 +38,16 @@ export default async function LifetimeAccessPage({
     error: authError,
   } = await supabase.auth.getUser();
 
-  if (authError) {
-    console.error('Failed to determine authenticated user for lifetime page:', authError);
+  const isSessionMissingError =
+    authError &&
+    typeof authError.message === 'string' &&
+    authError.message.toLowerCase().includes('auth session missing');
+
+  if (authError && !isSessionMissingError) {
+    console.error(
+      'Failed to determine authenticated user for lifetime page:',
+      authError
+    );
   }
 
   let currentUserTier: LifetimeTier | null = null;
@@ -52,9 +60,13 @@ export default async function LifetimeAccessPage({
       .maybeSingle();
 
     if (profileError) {
-      console.error('Failed to fetch current user lifetime tier:', profileError);
+      console.error(
+        'Failed to fetch current user lifetime tier:',
+        profileError
+      );
     } else {
-      currentUserTier = (profile?.lifetime_tier as LifetimeTier | null | undefined) ?? null;
+      currentUserTier =
+        (profile?.lifetime_tier as LifetimeTier | null | undefined) ?? null;
     }
   }
 
@@ -91,23 +103,21 @@ export default async function LifetimeAccessPage({
     case 'early':
       promoCopy = (
         <>
-          Super Early Supporter - <strong>{remaining}</strong> Plaetze
-          verfuegbar!
+          Super Early Supporter - <strong>{remaining}</strong> spots available!
         </>
       );
       break;
     case 'mid':
       promoCopy = (
         <>
-          Early Bird - <strong>{remaining}</strong> Plaetze uebrig!
+          Early Bird - <strong>{remaining}</strong> spots left!
         </>
       );
       break;
     default:
       promoCopy = (
         <>
-          Letzte Chance - nur <strong>{remaining}</strong> Lifetime Deals
-          uebrig!
+          Last chance - only <strong>{remaining}</strong> lifetime deals left!
         </>
       );
       break;
@@ -115,7 +125,7 @@ export default async function LifetimeAccessPage({
 
   const claimedPercentage = Math.min(
     100,
-    Math.round((total / MAX_LIFETIME_SLOTS) * 100),
+    Math.round((total / MAX_LIFETIME_SLOTS) * 100)
   );
 
   const priceLabel = `${EURO_SYMBOL}${price}`;
@@ -152,7 +162,7 @@ export default async function LifetimeAccessPage({
             <div className='flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between'>
               <div className='space-y-2 text-center sm:text-left'>
                 <p className='text-sm font-semibold uppercase tracking-wide text-primary/80'>
-                  Aktueller Deal
+                  Current Deal
                 </p>
                 <h2 className='text-3xl font-bold'>{promoCopy}</h2>
               </div>
@@ -161,15 +171,15 @@ export default async function LifetimeAccessPage({
                   {priceLabel}
                 </span>
                 <p className='text-sm font-medium text-primary/80'>
-                  Einmalzahlung - Lifetime Access
+                  One-time payment - Lifetime Access
                 </p>
               </div>
             </div>
 
             <div>
               <div className='mb-2 flex items-center justify-between text-sm font-medium text-primary/80'>
-                <span>{total} vergeben</span>
-                <span>{MAX_LIFETIME_SLOTS - total} verfuegbar</span>
+                <span>{total} claimed</span>
+                <span>{MAX_LIFETIME_SLOTS - total} available</span>
               </div>
               <div className='h-2 w-full overflow-hidden rounded-full bg-primary/10'>
                 <div
@@ -181,8 +191,8 @@ export default async function LifetimeAccessPage({
           </div>
 
           <p className='text-lg font-medium text-foreground'>
-            Sichere dir Lifetime Access fuer ScopeSafe, inklusive allem, was
-            kommt - keine Abogebuehren, keine Preiserhoehungen.
+            Secure lifetime access to ScopeSafe, including everything to come —
+            no subscription fees, no price increases.
           </p>
 
           {canCheckout ? (
@@ -203,7 +213,8 @@ export default async function LifetimeAccessPage({
               </Button>
               {!stripeProductId && (
                 <p className='text-sm text-muted-foreground'>
-                  Stripe product IDs for this tier are missing in the environment.
+                  Stripe product IDs for this tier are missing in the
+                  environment.
                 </p>
               )}
             </form>
@@ -211,7 +222,7 @@ export default async function LifetimeAccessPage({
             <div className='flex flex-col gap-4 sm:flex-row sm:items-center'>
               {currentUserTier ? (
                 <div className='w-full rounded-lg border border-primary/30 bg-primary/10 px-4 py-3 text-sm font-semibold text-primary sm:w-auto'>
-                  Du hast bereits Lifetime Access (Tier: {currentUserTier}).
+                  You already have Lifetime Access (Tier: {currentUserTier}).
                 </div>
               ) : (
                 <>
@@ -221,14 +232,14 @@ export default async function LifetimeAccessPage({
                     </Link>
                   </Button>
                   <p className='text-sm text-muted-foreground'>
-                    Schon registriert?{' '}
+                    Already registered?{' '}
                     <Link
                       href='/auth/login'
                       className='text-primary underline underline-offset-4'
                     >
-                      Anmelden
+                      Log in
                     </Link>{' '}
-                    und den Lifetime Deal sichern.
+                    to secure the lifetime deal.
                   </p>
                 </>
               )}
@@ -237,16 +248,15 @@ export default async function LifetimeAccessPage({
 
           <ul className='space-y-3 text-sm text-muted-foreground'>
             <li>
-              - Volle ScopeSafe-Funktionalitaet inklusive aller zukuenftigen
-              Features.
+              - Full ScopeSafe functionality including all future features.
             </li>
             <li>
-              - Lifetime-Support &amp; Updates - du gehoerst zu den 150
-              Beta-Investoren.
+              - Lifetime support &amp; updates — you'll be among the 150 beta
+              backers.
             </li>
             <li>
-              - Fixer Preis - egal, wie sehr ScopeSafe waechst oder im Preis
-              steigt.
+              - Fixed price — regardless of how much ScopeSafe grows or
+              increases in price.
             </li>
           </ul>
         </section>

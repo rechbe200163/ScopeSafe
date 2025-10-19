@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { Resend } from 'resend';
 
+import type { LifetimeTier } from '@/lib/lifetime';
 import { getSubscriptionEntitlements } from '@/lib/subscriptions/permissions';
 import type { SubscriptionTier } from '@/lib/subscriptions/plans';
 import { createClient } from '@/lib/supabase/server';
@@ -63,7 +64,7 @@ export async function POST(
     const { data: changeOrder, error } = await supabase
       .from('change_orders')
       .select(
-        '*, requests(client_message, projects(name, client_name, client_email, client_phone)), users(name, company_name, email, subscription_tier, subscription_status)'
+        '*, requests(client_message, projects(name, client_name, client_email, client_phone)), users(name, company_name, email, subscription_tier, subscription_status, lifetime_tier)'
       )
       .eq('id', id)
       .eq('user_id', user.id)
@@ -78,7 +79,10 @@ export async function POST(
 
     const entitlements = getSubscriptionEntitlements(
       changeOrder.users?.subscription_tier as SubscriptionTier | null | undefined,
-      changeOrder.users?.subscription_status as string | null | undefined
+      changeOrder.users?.subscription_status as string | null | undefined,
+      {
+        lifetimeTier: changeOrder.users?.lifetime_tier as LifetimeTier | null | undefined,
+      }
     );
 
     if (!entitlements.canSendEmails) {

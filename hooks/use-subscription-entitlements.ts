@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 
+import type { LifetimeTier } from '@/lib/lifetime'
 import type { SubscriptionTier } from '@/lib/subscriptions/plans'
 import {
   getSubscriptionEntitlements,
@@ -67,7 +68,7 @@ export function useSubscriptionEntitlements(
 
         const { data: profile, error: profileError } = await supabase
           .from('users')
-          .select('subscription_tier, subscription_status')
+          .select('subscription_tier, subscription_status, lifetime_tier')
           .eq('id', user.id)
           .single()
 
@@ -75,7 +76,12 @@ export function useSubscriptionEntitlements(
 
         const tier = (profile?.subscription_tier as SubscriptionTier) ?? 'free'
         const status = (profile?.subscription_status as string | null) ?? null
-        const computedEntitlements = getSubscriptionEntitlements(tier, status)
+        const lifetimeTier =
+          (profile?.lifetime_tier as LifetimeTier | null | undefined) ?? null
+
+        const computedEntitlements = getSubscriptionEntitlements(tier, status, {
+          lifetimeTier,
+        })
 
         if (!isMounted) return
         setSubscriptionTier(tier)

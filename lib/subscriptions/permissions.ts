@@ -1,3 +1,4 @@
+import type { LifetimeTier } from "../lifetime"
 import type { SubscriptionTier } from "./plans"
 
 export const ACTIVE_SUBSCRIPTION_STATUSES = new Set<string>(["active", "trialing", "past_due"])
@@ -8,6 +9,7 @@ export interface SubscriptionEntitlements {
   maxMonthlyChangeOrders: number | null
   watermarkText: string | null
   canSendEmails: boolean
+  hasLifetimeAccess: boolean
 }
 
 const MONTHLY_CHANGE_ORDER_LIMITS: Record<SubscriptionTier, number | null> = {
@@ -25,27 +27,33 @@ function hasActivePaidStatus(status: string | null | undefined) {
   return ACTIVE_SUBSCRIPTION_STATUSES.has(status)
 }
 
+interface EntitlementOptions {
+  lifetimeTier?: LifetimeTier | null | undefined
+}
+
 export function getSubscriptionEntitlements(
   tier: SubscriptionTier | null | undefined,
-  status: string | null | undefined
+  status: string | null | undefined,
+  { lifetimeTier }: EntitlementOptions = {}
 ): SubscriptionEntitlements {
   const normalizedTier: SubscriptionTier = tier && (["free", "pro", "business"] as const).includes(tier as SubscriptionTier)
     ? (tier as SubscriptionTier)
     : "free"
   const normalizedStatus = status ?? null
 
+  const hasLifetimeAccess = Boolean(lifetimeTier && lifetimeTier !== "closed")
   const isPaid = isPaidTier(normalizedTier)
   const hasPaidAccess = isPaid ? hasActivePaidStatus(normalizedStatus) : false
 
   const entitlementTier: SubscriptionTier =
-    isPaid && !hasPaidAccess ? "free" : normalizedTier
+    hasLifetimeAccess ? "business" : isPaid && !hasPaidAccess ? "free" : normalizedTier
 
-  const maxMonthlyChangeOrders = MONTHLY_CHANGE_ORDER_LIMITS[entitlementTier] ?? null
+  const maxMonthlyChangeOrders = hasLifetimeAccess ? null : MONTHLY_CHANGE_ORDER_LIMITS[entitlementTier] ?? null
 
   const watermarkText =
-    entitlementTier === "free" ? "powered by ScopeSafe" : null
+    hasLifetimeAccess ? null : entitlementTier === "free" ? "powered by ScopeSafe" : null
 
-  const canSendEmails = isPaid && hasPaidAccess
+  const canSendEmails = hasLifetimeAccess || (isPaid && hasPaidAccess)
 
   return {
     tier: normalizedTier,
@@ -53,6 +61,7 @@ export function getSubscriptionEntitlements(
     maxMonthlyChangeOrders,
     watermarkText,
     canSendEmails,
+    hasLifetimeAccess,
   }
 }
 
