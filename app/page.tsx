@@ -1,5 +1,5 @@
 import { Button } from '@/components/ui/button';
-import { determineLifetimeTier } from '@/lib/lifetime';
+import { analyzeLifetimePurchases } from '@/lib/lifetime/purchases';
 import { createClient } from '@/lib/supabase/server';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
@@ -9,12 +9,32 @@ export const dynamic = 'force-dynamic';
 
 export default async function HomePage() {
   const supabase = await createClient();
-  const { count, error } = await supabase
-    .from('users')
-    .select('id', { count: 'exact', head: true })
-    .not('lifetime_tier', 'is', null);
+  const [
+    { data: purchaseRows, error: purchaseError },
+    { data: tierLimitRows, error: tierLimitError },
+  ] = await Promise.all([
+    supabase
+      .from('lifetime_purchases')
+      .select('id,tier,status,reserved_expires_at,user_id,created_at')
+      .in('status', ['pending', 'paid']),
+    supabase.from('lifetime_tier_limits').select('tier,max_slots'),
+  ]);
 
-  if (!error && determineLifetimeTier(count ?? 0) !== 'closed') {
+  if (purchaseError) {
+    console.error('Failed to load lifetime purchases for home page:', purchaseError);
+  }
+
+  if (tierLimitError) {
+    console.error('Failed to load lifetime tier limits for home page:', tierLimitError);
+  }
+
+  const { availability } = analyzeLifetimePurchases(
+    Array.isArray(purchaseRows) ? purchaseRows : [],
+    Array.isArray(tierLimitRows) ? tierLimitRows : [],
+    Date.now()
+  );
+
+  if (availability.tier !== 'closed') {
     redirect('/get-lifetime-access');
   }
 

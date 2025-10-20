@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import type Stripe from 'stripe';
 
 import type { LifetimeTier } from '@/lib/lifetime';
+import type { LifetimePurchaseStatus } from '@/lib/lifetime/purchases';
 import { stripe } from '@/lib/stripe';
 import { resolveTierFromProductId } from '@/lib/subscriptions/server';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -141,6 +142,53 @@ function isLifetimeCheckoutTier(value: unknown): value is LifetimeCheckoutTier {
   );
 }
 
+function resolvePaymentIntentId(session: Stripe.Checkout.Session): string | null {
+  const paymentIntent = session.payment_intent;
+  if (!paymentIntent) return null;
+  if (typeof paymentIntent === 'string') return paymentIntent;
+  if (typeof paymentIntent === 'object' && 'id' in paymentIntent) {
+    return paymentIntent.id ?? null;
+  }
+  return null;
+}
+
+async function updateLifetimePurchaseStatusFromSession(
+  session: Stripe.Checkout.Session,
+  status: LifetimePurchaseStatus
+) {
+  const purchaseId =
+    (session.metadata?.lifetimePurchaseId as string | undefined) ?? null;
+  const adminClient = createAdminClient();
+  const updates: Record<string, unknown> = {
+    status,
+    reserved_expires_at: null,
+    updated_at: new Date().toISOString(),
+  };
+
+  const paymentIntentId = resolvePaymentIntentId(session);
+  if (paymentIntentId) {
+    updates.stripe_payment_intent_id = paymentIntentId;
+  }
+
+  updates.stripe_session_id = session.id;
+
+  let query = adminClient.from('lifetime_purchases').update(updates);
+
+  if (purchaseId) {
+    query = query.eq('id', purchaseId);
+  } else {
+    query = query.eq('stripe_session_id', session.id);
+  }
+
+  const { error } = await query;
+  if (error) {
+    console.error(
+      `Failed to update lifetime purchase status to ${status}:`,
+      error,
+    );
+  }
+}
+
 async function upsertLifetimeUserFromSession(session: Stripe.Checkout.Session) {
   if (session.mode !== 'payment' || session.payment_status !== 'paid') return;
 
@@ -161,6 +209,59 @@ async function upsertLifetimeUserFromSession(session: Stripe.Checkout.Session) {
         session.customer_email ??
         null
       )?.toLowerCase() ?? null;
+
+    const paymentIntentId = resolvePaymentIntentId(session);
+
+    const purchaseUpdates: Record<string, unknown> = {
+      status: 'paid',
+      reserved_expires_at: null,
+      stripe_session_id: session.id,
+      updated_at: new Date().toISOString(),
+    };
+
+    if (paymentIntentId) {
+      purchaseUpdates.stripe_payment_intent_id = paymentIntentId;
+    }
+
+    if (supabaseUserId) {
+      purchaseUpdates.user_id = supabaseUserId;
+    }
+
+    if (normalizedEmail) {
+      purchaseUpdates.email = normalizedEmail;
+    }
+
+    const purchaseId =
+      (session.metadata?.lifetimePurchaseId as string | undefined) ?? null;
+
+    if (purchaseId) {
+      const { error: purchaseUpdateError } = await adminClient
+        .from('lifetime_purchases')
+        .update(purchaseUpdates)
+        .eq('id', purchaseId);
+
+      if (purchaseUpdateError) {
+        console.error(
+          'Failed to update lifetime purchase after payment:',
+          purchaseUpdateError,
+        );
+      }
+    } else {
+      console.warn(
+        `Lifetime checkout session ${session.id} missing purchase metadata. Falling back to session lookup.`,
+      );
+      const { error: purchaseUpdateError } = await adminClient
+        .from('lifetime_purchases')
+        .update(purchaseUpdates)
+        .eq('stripe_session_id', session.id);
+
+      if (purchaseUpdateError) {
+        console.error(
+          'Failed to update lifetime purchase using session id:',
+          purchaseUpdateError,
+        );
+      }
+    }
 
     if (!supabaseUserId && !normalizedEmail) {
       console.error(
@@ -275,6 +376,16 @@ export async function POST(request: Request) {
           });
         }
         await upsertLifetimeUserFromSession(session);
+        break;
+      }
+      case 'checkout.session.expired': {
+        const session = event.data.object as Stripe.Checkout.Session;
+        await updateLifetimePurchaseStatusFromSession(session, 'expired');
+        break;
+      }
+      case 'checkout.session.async_payment_failed': {
+        const session = event.data.object as Stripe.Checkout.Session;
+        await updateLifetimePurchaseStatusFromSession(session, 'cancelled');
         break;
       }
 
