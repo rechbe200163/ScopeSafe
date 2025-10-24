@@ -10,7 +10,7 @@ export function renderBusinessPlan() {
 // lib/getBaseUrl.ts
 export function getBaseUrl() {
   // server (für Emails/Magic Links etc. oder SSG)
-  const baseURL = process.env.NEXT_PUBLIC_APP_URL;
+  const baseURL = process.env.NEXT_PUBLIC_APP_URL || 'https://scopesafe.app';
   if (baseURL) {
     console.log('Base URL from env:', baseURL);
     return baseURL;
