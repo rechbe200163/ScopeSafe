@@ -89,8 +89,7 @@ async function handleSubscriptionEvent(
     const supabaseUserId =
       subscription.metadata?.supabaseUserId || customerMetadataSupabaseUserId;
 
-    const itemCurrentPeriodEnd =
-      subscriptionItem?.current_period_end ?? null;
+    const itemCurrentPeriodEnd = subscriptionItem?.current_period_end ?? null;
 
     const cancelled =
       eventType === 'customer.subscription.deleted' ||
@@ -142,7 +141,9 @@ function isLifetimeCheckoutTier(value: unknown): value is LifetimeCheckoutTier {
   );
 }
 
-function resolvePaymentIntentId(session: Stripe.Checkout.Session): string | null {
+function resolvePaymentIntentId(
+  session: Stripe.Checkout.Session
+): string | null {
   const paymentIntent = session.payment_intent;
   if (!paymentIntent) return null;
   if (typeof paymentIntent === 'string') return paymentIntent;
@@ -184,13 +185,15 @@ async function updateLifetimePurchaseStatusFromSession(
   if (error) {
     console.error(
       `Failed to update lifetime purchase status to ${status}:`,
-      error,
+      error
     );
   }
 }
 
 async function upsertLifetimeUserFromSession(session: Stripe.Checkout.Session) {
   if (session.mode !== 'payment' || session.payment_status !== 'paid') return;
+
+  console.log('Processing lifetime checkout session:', session.id);
 
   const tierValue = session.metadata?.lifetimeTier;
   if (!isLifetimeCheckoutTier(tierValue)) return;
@@ -239,16 +242,17 @@ async function upsertLifetimeUserFromSession(session: Stripe.Checkout.Session) {
         .from('lifetime_purchases')
         .update(purchaseUpdates)
         .eq('id', purchaseId);
+      console.log('Updating lifetime purchase', purchaseId, purchaseUpdates);
 
       if (purchaseUpdateError) {
         console.error(
           'Failed to update lifetime purchase after payment:',
-          purchaseUpdateError,
+          purchaseUpdateError
         );
       }
     } else {
       console.warn(
-        `Lifetime checkout session ${session.id} missing purchase metadata. Falling back to session lookup.`,
+        `Lifetime checkout session ${session.id} missing purchase metadata. Falling back to session lookup.`
       );
       const { error: purchaseUpdateError } = await adminClient
         .from('lifetime_purchases')
@@ -258,7 +262,7 @@ async function upsertLifetimeUserFromSession(session: Stripe.Checkout.Session) {
       if (purchaseUpdateError) {
         console.error(
           'Failed to update lifetime purchase using session id:',
-          purchaseUpdateError,
+          purchaseUpdateError
         );
       }
     }
@@ -266,7 +270,7 @@ async function upsertLifetimeUserFromSession(session: Stripe.Checkout.Session) {
     if (!supabaseUserId && !normalizedEmail) {
       console.error(
         'Lifetime checkout completed without user identifiers. Session:',
-        session.id,
+        session.id
       );
       return;
     }
@@ -294,7 +298,7 @@ async function upsertLifetimeUserFromSession(session: Stripe.Checkout.Session) {
       console.warn(
         supabaseUserId
           ? `Lifetime checkout completed for user ${supabaseUserId}, but no matching user record was found.`
-          : `Lifetime checkout completed for ${normalizedEmail}, but no matching user record was found.`,
+          : `Lifetime checkout completed for ${normalizedEmail}, but no matching user record was found.`
       );
       return;
     }
@@ -324,7 +328,7 @@ async function upsertLifetimeUserFromSession(session: Stripe.Checkout.Session) {
   } catch (error) {
     console.error(
       'Supabase admin client error while recording lifetime tier:',
-      error,
+      error
     );
   }
 }

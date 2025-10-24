@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 
+import { LifetimeDashboardCta } from '@/components/lifetime-dashboard-cta';
 import { Button } from '@/components/ui/button';
 import {
   LIFETIME_TIER_PRICING,
@@ -123,6 +124,34 @@ export default async function LifetimeAccessPage({
 
   const canCheckout =
     Boolean(activeTier) && Boolean(user) && !currentUserTierStatus;
+  const metadata = (user?.user_metadata ?? {}) as Record<string, unknown>;
+  const metadataFullName =
+    typeof metadata['full_name'] === 'string'
+      ? (metadata['full_name'] as string).trim()
+      : null;
+  const metadataName =
+    typeof metadata['name'] === 'string' ? (metadata['name'] as string).trim() : null;
+  const metadataAvatarUrl =
+    typeof metadata['avatar_url'] === 'string'
+      ? (metadata['avatar_url'] as string).trim()
+      : null;
+  const metadataPicture =
+    typeof metadata['picture'] === 'string'
+      ? (metadata['picture'] as string).trim()
+      : null;
+  const lifetimeUserName =
+    metadataFullName && metadataFullName.length > 0
+      ? metadataFullName
+      : metadataName && metadataName.length > 0
+      ? metadataName
+      : null;
+  const lifetimeAvatarUrl =
+    metadataAvatarUrl && metadataAvatarUrl.length > 0
+      ? metadataAvatarUrl
+      : metadataPicture && metadataPicture.length > 0
+      ? metadataPicture
+      : null;
+  const isLifetimeMember = currentUserTierStatus === 'paid';
   const pendingReservationDisplay =
     currentUserTierStatus === 'pending' && userStatus.reservationExpiresAt
       ? new Date(userStatus.reservationExpiresAt).toLocaleString()
@@ -142,6 +171,12 @@ export default async function LifetimeAccessPage({
   if (isSoldOut) {
     return (
       <div className='flex min-h-screen flex-col bg-background'>
+        <LifetimeDashboardCta
+          initialIsLifetimeUser={isLifetimeMember}
+          userName={lifetimeUserName}
+          userEmail={user?.email ?? null}
+          avatarUrl={lifetimeAvatarUrl}
+        />
         <main className='flex-1 bg-gradient-to-b from-background via-background to-muted/40'>
           <section className='px-6 py-16 sm:py-24'>
             <div className='mx-auto flex max-w-3xl flex-col gap-10'>
@@ -338,6 +373,12 @@ export default async function LifetimeAccessPage({
 
   return (
     <div className='flex min-h-screen flex-col bg-background'>
+      <LifetimeDashboardCta
+        initialIsLifetimeUser={isLifetimeMember}
+        userName={lifetimeUserName}
+        userEmail={user?.email ?? null}
+        avatarUrl={lifetimeAvatarUrl}
+      />
       <main className='flex-1 bg-gradient-to-b from-background via-background to-muted/40'>
         <section className='px-6 py-16 sm:py-24'>
           <div className='mx-auto flex max-w-5xl flex-col gap-12'>
