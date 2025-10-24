@@ -16,5 +16,5 @@ export function getBaseUrl() {
     return baseURL;
   }
   console.log('Base URL from env not found, using default');
-  return 'http://localhost:3000';
+  return 'https://scopesafe.app';
 }
