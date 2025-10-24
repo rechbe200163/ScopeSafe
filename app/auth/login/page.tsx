@@ -72,6 +72,7 @@ export default function LoginPage() {
 
     try {
       const origin = getBaseUrl();
+      console.log('Origin for GitHub OAuth redirect:', origin);
       const callbackUrl = `${origin}/auth/callback?next=${encodeURIComponent(
         redirectTo
       )}`;
