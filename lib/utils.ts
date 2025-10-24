@@ -10,5 +10,11 @@ export function renderBusinessPlan() {
 // lib/getBaseUrl.ts
 export function getBaseUrl() {
   // server (für Emails/Magic Links etc. oder SSG)
-  return process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+  const baseURL = process.env.NEXT_PUBLIC_APP_URL;
+  if (baseURL) {
+    console.log('Base URL from env:', baseURL);
+    return baseURL;
+  }
+  console.log('Base URL from env not found, using default');
+  return 'http://localhost:3000';
 }
