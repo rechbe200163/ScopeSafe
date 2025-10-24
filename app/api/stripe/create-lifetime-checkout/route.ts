@@ -14,14 +14,11 @@ import {
 import { getActivePriceIdForProduct, stripe } from '@/lib/stripe';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
+import { getBaseUrl } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
 
 const RESERVATION_TTL_MINUTES = 15;
-
-function getBaseUrl() {
-  return process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-}
 
 function getSuccessUrl(tier: Exclude<LifetimeTier, 'closed'>) {
   const baseUrl = getBaseUrl();
@@ -47,7 +44,7 @@ export async function POST() {
   if (!stripeClient) {
     return NextResponse.json(
       { error: 'Stripe is not configured on the server.' },
-      { status: 500 },
+      { status: 500 }
     );
   }
 
@@ -68,7 +65,7 @@ export async function POST() {
     if (!user) {
       return NextResponse.json(
         { error: 'Please sign in to purchase lifetime access.' },
-        { status: 401 },
+        { status: 401 }
       );
     }
 
@@ -79,17 +76,20 @@ export async function POST() {
       .single();
 
     if (profileError || !profile) {
-      console.error('Failed to load user profile for lifetime checkout:', profileError);
+      console.error(
+        'Failed to load user profile for lifetime checkout:',
+        profileError
+      );
       return NextResponse.json(
         { error: 'Unable to load your account details.' },
-        { status: 500 },
+        { status: 500 }
       );
     }
 
     if (profile.lifetime_tier && isLifetimeTierKey(profile.lifetime_tier)) {
       return NextResponse.json(
         { error: 'Lifetime access is already active on this account.' },
-        { status: 409 },
+        { status: 409 }
       );
     }
 
@@ -110,7 +110,7 @@ export async function POST() {
       console.error('Failed to load lifetime purchases:', purchaseError);
       return NextResponse.json(
         { error: 'Unable to verify lifetime availability.' },
-        { status: 500 },
+        { status: 500 }
       );
     }
 
@@ -118,7 +118,7 @@ export async function POST() {
       console.error('Failed to load lifetime tier limits:', tierLimitError);
       return NextResponse.json(
         { error: 'Unable to verify lifetime availability.' },
-        { status: 500 },
+        { status: 500 }
       );
     }
 
@@ -128,12 +128,16 @@ export async function POST() {
       Array.isArray(tierLimitRows) ? tierLimitRows : [],
       nowMs
     );
-    const userStatus = resolveUserLifetimeStatus(activePurchases, user.id, nowMs);
+    const userStatus = resolveUserLifetimeStatus(
+      activePurchases,
+      user.id,
+      nowMs
+    );
 
     if (userStatus.status === 'paid') {
       return NextResponse.json(
         { error: 'Lifetime access is already active on this account.' },
-        { status: 409 },
+        { status: 409 }
       );
     }
 
@@ -152,7 +156,7 @@ export async function POST() {
     if (!activeTier || remainingInTier <= 0) {
       return NextResponse.json(
         { error: 'The lifetime offer is sold out.' },
-        { status: 409 },
+        { status: 409 }
       );
     }
 
@@ -162,7 +166,7 @@ export async function POST() {
       console.error(`Stripe product not configured for tier "${activeTier}".`);
       return NextResponse.json(
         { error: 'Stripe is not configured for this lifetime tier.' },
-        { status: 500 },
+        { status: 500 }
       );
     }
 
@@ -172,7 +176,7 @@ export async function POST() {
       console.error(`Lifetime price missing for tier "${activeTier}".`);
       return NextResponse.json(
         { error: 'Lifetime pricing is not configured for this tier.' },
-        { status: 500 },
+        { status: 500 }
       );
     }
 
@@ -181,7 +185,7 @@ export async function POST() {
     if (!priceId) {
       return NextResponse.json(
         { error: 'Unable to resolve Stripe price for this tier.' },
-        { status: 500 },
+        { status: 500 }
       );
     }
 
@@ -209,7 +213,7 @@ export async function POST() {
       console.error('Failed to reserve lifetime slot:', insertError);
       return NextResponse.json(
         { error: 'Unable to reserve a lifetime slot right now.' },
-        { status: 500 },
+        { status: 500 }
       );
     }
 
@@ -292,7 +296,7 @@ export async function POST() {
     console.error('Lifetime checkout session error:', error);
     return NextResponse.json(
       { error: 'Unable to create lifetime checkout session.' },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

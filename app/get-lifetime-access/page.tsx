@@ -13,7 +13,15 @@ import {
 } from '@/lib/lifetime/purchases';
 import { createClient } from '@/lib/supabase/server';
 import Link from 'next/link';
-import { ArrowRight, Check, Clock, Shield, Sparkles, Users } from 'lucide-react';
+import {
+  ArrowRight,
+  Check,
+  Clock,
+  Shield,
+  Sparkles,
+  Users,
+} from 'lucide-react';
+import { getBaseUrl } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
 
@@ -71,12 +79,11 @@ export default async function LifetimeAccessPage({
   }
 
   const nowMs = Date.now();
-  const { availability, activePurchases } =
-    analyzeLifetimePurchases(
-      Array.isArray(purchaseRows) ? purchaseRows : [],
-      Array.isArray(tierLimitRows) ? tierLimitRows : [],
-      nowMs
-    );
+  const { availability, activePurchases } = analyzeLifetimePurchases(
+    Array.isArray(purchaseRows) ? purchaseRows : [],
+    Array.isArray(tierLimitRows) ? tierLimitRows : [],
+    nowMs
+  );
   const userStatus = resolveUserLifetimeStatus(
     activePurchases,
     user?.id ?? null,
@@ -130,7 +137,9 @@ export default async function LifetimeAccessPage({
       ? (metadata['full_name'] as string).trim()
       : null;
   const metadataName =
-    typeof metadata['name'] === 'string' ? (metadata['name'] as string).trim() : null;
+    typeof metadata['name'] === 'string'
+      ? (metadata['name'] as string).trim()
+      : null;
   const metadataAvatarUrl =
     typeof metadata['avatar_url'] === 'string'
       ? (metadata['avatar_url'] as string).trim()
@@ -195,8 +204,8 @@ export default async function LifetimeAccessPage({
                 </h1>
                 <p className='text-lg text-muted-foreground sm:text-xl'>
                   Thank you to the early adopters who jumped in. We cap each
-                  lifetime wave so we can keep support
-                  and product feedback manageable.
+                  lifetime wave so we can keep support and product feedback
+                  manageable.
                 </p>
               </header>
 
@@ -216,7 +225,9 @@ export default async function LifetimeAccessPage({
                   <p className='text-sm font-semibold uppercase tracking-wide text-primary/80'>
                     Next chance
                   </p>
-                  <p className='text-3xl font-bold text-primary'>Join waitlist</p>
+                  <p className='text-3xl font-bold text-primary'>
+                    Join waitlist
+                  </p>
                   <p className='text-sm text-muted-foreground'>
                     Add your email and we will notify you before the next drop.
                   </p>
@@ -426,7 +437,7 @@ export default async function LifetimeAccessPage({
 
               <div>
                 <div className='mb-2 flex items-center justify-between text-sm font-medium text-primary/80'>
-                <span>{reservedSlots} reserved</span>
+                  <span>{reservedSlots} reserved</span>
                   <span>{availableSlots} available</span>
                 </div>
                 <div className='h-2 w-full overflow-hidden rounded-full bg-primary/10'>
@@ -445,7 +456,7 @@ export default async function LifetimeAccessPage({
 
             {canCheckout ? (
               <form
-                action='/api/stripe/create-lifetime-checkout'
+                action={`${getBaseUrl()}/api/stripe/create-lifetime-checkout`}
                 method='POST'
                 className='flex flex-col gap-4 sm:flex-row sm:items-center'
               >
@@ -474,7 +485,8 @@ export default async function LifetimeAccessPage({
                   </div>
                 ) : currentUserTierStatus === 'pending' && currentUserTier ? (
                   <div className='w-full rounded-lg border border-amber-300 bg-amber-100/40 px-4 py-3 text-sm font-medium text-amber-900 sm:w-auto'>
-                    Your lifetime checkout is still pending (tier: {currentUserTier}
+                    Your lifetime checkout is still pending (tier:{' '}
+                    {currentUserTier}
                     ). Complete the payment while the reservation is active
                     {pendingReservationDisplay
                       ? ` — hold expires ${pendingReservationDisplay}.`
@@ -553,7 +565,10 @@ export default async function LifetimeAccessPage({
               </h3>
               <div className='grid gap-6 md:grid-cols-2'>
                 {lifetimeComparison.map((item) => (
-                  <div key={item.label} className='rounded-xl border bg-card p-5'>
+                  <div
+                    key={item.label}
+                    className='rounded-xl border bg-card p-5'
+                  >
                     <p className='mb-3 text-sm font-semibold uppercase tracking-wide text-primary/70'>
                       {item.label}
                     </p>
@@ -602,8 +617,8 @@ export default async function LifetimeAccessPage({
                 <p className='text-sm text-muted-foreground'>
                   {totalPaid > 0 ? (
                     <>
-                      {totalPaid} freelancers already secured lifetime access and
-                      are using ScopeSafe to set boundaries without losing
+                      {totalPaid} freelancers already secured lifetime access
+                      and are using ScopeSafe to set boundaries without losing
                       rapport.
                     </>
                   ) : (
@@ -615,7 +630,9 @@ export default async function LifetimeAccessPage({
                     "My client updates finally read like policies, not pleas."
                   </li>
                   <li>"The AI summary alone saved me an entire afternoon."</li>
-                  <li>"Clients sign off faster because the pricing feels fair."</li>
+                  <li>
+                    "Clients sign off faster because the pricing feels fair."
+                  </li>
                 </ul>
               </div>
             </div>

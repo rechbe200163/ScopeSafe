@@ -1,34 +1,71 @@
-import { createClient } from "@/lib/supabase/server"
-import { NextResponse } from "next/server"
-import type { NextRequest } from "next/server"
+import { createClient } from '@/lib/supabase/server';
+import { NextResponse } from 'next/server';
+// The client you created from the Server-Side Auth instructions
 
-export async function GET(request: NextRequest) {
-  const requestUrl = new URL(request.url)
-  const code = requestUrl.searchParams.get("code")
-  const nextParam = requestUrl.searchParams.get("next")
-  const providerError = requestUrl.searchParams.get("error_description")
+export async function GET(request: Request) {
+  const { searchParams, origin } = new URL(request.url);
+  const code = searchParams.get('code');
+  // if "next" is in param, use it as the redirect URL
+  let next = searchParams.get('next') ?? '/';
+  if (!next.startsWith('/')) {
+    // if "next" is not a relative URL, use the default
+    next = '/';
+  }
 
-  const sanitizedNext =
-    nextParam && nextParam.startsWith("/") && !nextParam.startsWith("//") ? nextParam : "/dashboard"
+  if (code) {
+    const supabase = await createClient();
+    const {
+      data: { user: exchangedUser },
+      error: exchangeError,
+    } = await supabase.auth.exchangeCodeForSession(code);
 
-  let authError = providerError
+    if (!exchangeError) {
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
 
-  if (code && !authError) {
-    try {
-      const supabase = await createClient()
-      await supabase.auth.exchangeCodeForSession(code)
-    } catch (error: unknown) {
-      authError = error instanceof Error ? error.message : "Unable to complete authentication"
+      const activeUser = user ?? exchangedUser;
+
+      const email = activeUser?.email ?? activeUser?.user_metadata?.email;
+
+      if (activeUser && email) {
+        const preferredName =
+          activeUser.user_metadata?.name ??
+          activeUser.user_metadata?.full_name ??
+          activeUser.user_metadata?.user_name ??
+          null;
+
+        const { error: upsertError } = await supabase.from('users').upsert(
+          {
+            id: activeUser.id,
+            email,
+            name: preferredName,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'id' },
+        );
+
+        if (upsertError) {
+          console.error('Failed to upsert user profile', upsertError);
+        }
+      } else if (userError) {
+        console.error('Failed to load user after exchanging auth code', userError);
+      }
+
+      const forwardedHost = request.headers.get('x-forwarded-host'); // original origin before load balancer
+      const isLocalEnv = process.env.NODE_ENV === 'development';
+      if (isLocalEnv) {
+        // we can be sure that there is no load balancer in between, so no need to watch for X-Forwarded-Host
+        return NextResponse.redirect(`${origin}${next}`);
+      } else if (forwardedHost) {
+        return NextResponse.redirect(`https://${forwardedHost}${next}`);
+      } else {
+        return NextResponse.redirect(`${origin}${next}`);
+      }
     }
   }
 
-  const redirectPath = authError ? "/auth/login" : sanitizedNext
-  const redirectUrl = new URL(redirectPath, requestUrl.origin)
-
-  if (authError) {
-    redirectUrl.searchParams.set("authError", authError)
-    redirectUrl.searchParams.set("redirectTo", sanitizedNext)
-  }
-
-  return NextResponse.redirect(redirectUrl)
+  // return the user to an error page with instructions
+  return NextResponse.redirect(`${origin}/auth/auth-code-error`);
 }
