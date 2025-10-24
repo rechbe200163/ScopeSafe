@@ -18,6 +18,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Github } from 'lucide-react';
+import { getBaseUrl } from '@/lib/utils';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -70,7 +71,7 @@ export default function LoginPage() {
     setError(null);
 
     try {
-      const origin = window.location.origin;
+      const origin = getBaseUrl();
       const callbackUrl = `${origin}/auth/callback?next=${encodeURIComponent(
         redirectTo
       )}`;
