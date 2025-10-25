@@ -101,6 +101,7 @@ export default async function LifetimeAccessPage({
     claimedPercentage,
     totalPaid,
   } = availability;
+  console.log('Lifetime availability:', JSON.stringify(availability, null, 2));
   const isSoldOut = tier === 'closed';
   const price = activeTier ? LIFETIME_TIER_PRICING[activeTier] : null;
   const priceLabel = price ? `${EURO_SYMBOL}${price}` : '';

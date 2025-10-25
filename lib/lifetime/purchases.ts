@@ -205,11 +205,8 @@ export function analyzeLifetimePurchases(
   const totalPaid = paidPurchases.length;
   const tier = determineTierFromCount(totalActive, tierLimits);
   const activeTier = tier === 'closed' ? null : tier;
-  const effectiveMaxSlots = Math.max(
-    tierLimits.early,
-    tierLimits.mid,
-    tierLimits.final
-  );
+  const effectiveMaxSlots =
+    tier === 'closed' ? tierLimits.final : tierLimits[tier];
   const reservedSlots = Math.min(totalActive, effectiveMaxSlots);
   const availableSlots = Math.max(effectiveMaxSlots - totalActive, 0);
   const remainingInTier = remainingSlotsForTier(totalActive, tier, tierLimits);

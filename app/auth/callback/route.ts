@@ -43,14 +43,17 @@ export async function GET(request: Request) {
             name: preferredName,
             updated_at: new Date().toISOString(),
           },
-          { onConflict: 'id' },
+          { onConflict: 'id' }
         );
 
         if (upsertError) {
           console.error('Failed to upsert user profile', upsertError);
         }
       } else if (userError) {
-        console.error('Failed to load user after exchanging auth code', userError);
+        console.error(
+          'Failed to load user after exchanging auth code',
+          userError
+        );
       }
 
       const forwardedHost = request.headers.get('x-forwarded-host'); // original origin before load balancer
